@@ -78,15 +78,117 @@ NSString* appDataFolder;
                        if ([fileLocation hasPrefix:path]) {
                          fileLocation = [appDataFolder stringByAppendingString:request.URL.path];
                        }
-                       
+
                        fileLocation = [fileLocation stringByReplacingOccurrencesOfString:FileSchemaConstant withString:@""];
                        if (![[NSFileManager defaultManager] fileExistsAtPath:fileLocation]) {
                            return nil;
                        }
-                         
+
                        return [GCDWebServerFileResponse responseWithFile:fileLocation byteRange:request.byteRange];
                      }
    ];
+
+   [_webServer addHandlerForMethod:@"GET" path:@"/proxy" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+      NSString *str = [request.headers objectForKey:@"x-url"];
+      if (!str) {
+         str = [request.query objectForKey:@"url"];
+      }
+      NSURL *url = [NSURL URLWithString:str];
+      NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
+
+      [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+      [req setURL:url];
+      [req setHTTPMethod:@"GET"];
+
+      NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+      config.HTTPAdditionalHeaders = request.headers;
+      NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+      config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
+      NSURLSessionDataTask *task = [session dataTaskWithRequest:req
+                                              completionHandler:
+                                    ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
+                                       NSData *resp = respz;
+                                       NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) urlResponse;
+                                       NSDictionary *headers = [httpResponse allHeaderFields];
+
+                                       if (requestError != nil) {
+                                          resp = [[requestError localizedDescription] dataUsingEncoding:NSUnicodeStringEncoding];
+                                       }
+
+                                       GCDWebServerDataResponse *response = [[GCDWebServerDataResponse alloc] initWithData:resp contentType:@"text/plain"];
+
+                                       response.statusCode = httpResponse.statusCode;
+
+                                       for (NSString* key in headers) {
+                                          id k = [key lowercaseString];
+                                          if ([k isEqualToString: @"connection"] ||
+                                              [k isEqualToString: @"content-length"] ||
+                                              [k isEqualToString: @"content-encoding"]) {
+                                             continue;
+                                          }
+                                          id value = [headers objectForKey:key];
+                                          [response setValue:value forAdditionalHeader:key];
+                                       }
+
+                                       [response setValue:str forAdditionalHeader:@"x-proxy-url"];
+
+                                       completionBlock(response);
+                                    }];
+      [task resume];
+      }
+   ];
+
+   [_webServer addHandlerForMethod:@"POST" path:@"/proxy" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+      NSString *str = [request.headers objectForKey:@"x-url"];
+      if (!str) {
+         str = [request.query objectForKey:@"url"];
+      }
+      GCDWebServerDataRequest *mreq = (GCDWebServerDataRequest *) request;
+      NSURL *url = [NSURL URLWithString:str];
+      NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
+
+      [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+      [req setURL:url];
+      [req setHTTPMethod:@"POST"];
+      [req setHTTPBody:mreq.data];
+
+      NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+      config.HTTPAdditionalHeaders = request.headers;
+      config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
+      NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+      NSURLSessionDataTask *task = [session dataTaskWithRequest:req
+                                              completionHandler:
+                                    ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
+                                       NSData *resp = respz;
+                                       NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) urlResponse;
+                                       NSDictionary *headers = [httpResponse allHeaderFields];
+
+                                       if (requestError != nil) {
+                                          resp = [[requestError localizedDescription] dataUsingEncoding:NSUnicodeStringEncoding];
+                                       }
+
+                                       GCDWebServerDataResponse *response = [[GCDWebServerDataResponse alloc] initWithData:resp contentType:@"text/plain"];
+
+                                       response.statusCode = httpResponse.statusCode;
+
+                                       for (NSString* key in headers) {
+                                          id k = [key lowercaseString];
+                                          if ([k isEqualToString: @"connection"] ||
+                                              [k isEqualToString: @"content-length"] ||
+                                              [k isEqualToString: @"content-encoding"]) {
+                                             continue;
+                                          }
+                                          id value = [headers objectForKey:key];
+                                          [response setValue:value forAdditionalHeader:key];
+                                       }
+
+                                       [response setValue:str forAdditionalHeader:@"x-proxy-url"];
+
+                                       completionBlock(response);
+                                    }];
+      [task resume];
+   }
+    ];
 }
 
 - (BOOL)identity_application: (UIApplication *)application
