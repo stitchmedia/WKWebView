@@ -96,6 +96,7 @@ NSString* appDataFolder;
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
 
+      [req setHTTPShouldHandleCookies:true];
       [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
       [req setURL:url];
       [req setHTTPMethod:@"GET"];
@@ -123,14 +124,16 @@ NSString* appDataFolder;
                                           id k = [key lowercaseString];
                                           if ([k isEqualToString: @"connection"] ||
                                               [k isEqualToString: @"content-length"] ||
-                                              [k isEqualToString: @"content-encoding"]) {
+                                              [k isEqualToString: @"content-encoding"] ||
+                                              [k isEqualToString: @"host"]) {
                                              continue;
                                           }
                                           id value = [headers objectForKey:key];
                                           [response setValue:value forAdditionalHeader:key];
                                        }
 
-                                       [response setValue:str forAdditionalHeader:@"x-proxy-url"];
+                                      [response setValue:str forAdditionalHeader:@"x-proxy-url"];
+                                      response.contentType = headers[@"content-type"];
 
                                        completionBlock(response);
                                     }];
@@ -147,6 +150,7 @@ NSString* appDataFolder;
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
 
+      [req setHTTPShouldHandleCookies:true];
       [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
       [req setURL:url];
       [req setHTTPMethod:@"POST"];
@@ -173,16 +177,20 @@ NSString* appDataFolder;
 
                                        for (NSString* key in headers) {
                                           id k = [key lowercaseString];
-                                          if ([k isEqualToString: @"connection"] ||
-                                              [k isEqualToString: @"content-length"] ||
-                                              [k isEqualToString: @"content-encoding"]) {
-                                             continue;
-                                          }
+                                           if ([k isEqualToString: @"connection"] ||
+                                               [k isEqualToString: @"content-length"] ||
+                                               [k isEqualToString: @"content-encoding"] ||
+                                               [k isEqualToString: @"host"]) {
+                                               continue;
+                                           }
                                           id value = [headers objectForKey:key];
                                           [response setValue:value forAdditionalHeader:key];
                                        }
 
                                        [response setValue:str forAdditionalHeader:@"x-proxy-url"];
+                                        if (headers[@"content-type"]) {
+                                            response.contentType = headers[@"content-type"];
+                                        }
 
                                        completionBlock(response);
                                     }];
