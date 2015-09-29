@@ -102,7 +102,17 @@ NSString* appDataFolder;
       [req setHTTPMethod:@"GET"];
 
       NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-      config.HTTPAdditionalHeaders = request.headers;
+      for (NSString* key in request.headers) {
+         id k = [key lowercaseString];
+         if ([k isEqualToString: @"connection"] ||
+             [k isEqualToString: @"content-length"] ||
+             [k isEqualToString: @"content-encoding"] ||
+             [k isEqualToString: @"host"]) {
+            continue;
+         }
+         id value = [request.headers objectForKey:key];
+         [req setValue:value forHTTPHeaderField:key];
+      }
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
       NSURLSessionDataTask *task = [session dataTaskWithRequest:req
@@ -157,7 +167,17 @@ NSString* appDataFolder;
       [req setHTTPBody:mreq.data];
 
       NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-      config.HTTPAdditionalHeaders = request.headers;
+      for (NSString* key in request.headers) {
+         id k = [key lowercaseString];
+         if ([k isEqualToString: @"connection"] ||
+             [k isEqualToString: @"content-length"] ||
+             [k isEqualToString: @"content-encoding"] ||
+             [k isEqualToString: @"host"]) {
+            continue;
+         }
+         id value = [request.headers objectForKey:key];
+         [req setValue:value forHTTPHeaderField:key];
+      }
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
       NSURLSessionDataTask *task = [session dataTaskWithRequest:req
