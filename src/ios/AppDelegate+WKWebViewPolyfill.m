@@ -142,7 +142,6 @@ NSString* appDataFolder;
                                           [response setValue:value forAdditionalHeader:key];
                                        }
 
-                                      [response setValue:str forAdditionalHeader:@"x-proxy-url"];
                                       if (headers[@"content-type"]) {
                                         response.contentType = headers[@"content-type"];
                                       }
@@ -209,7 +208,6 @@ NSString* appDataFolder;
                                           [response setValue:value forAdditionalHeader:key];
                                        }
 
-                                       [response setValue:str forAdditionalHeader:@"x-proxy-url"];
                                        if (headers[@"content-type"]) {
                                          response.contentType = headers[@"content-type"];
                                        }
