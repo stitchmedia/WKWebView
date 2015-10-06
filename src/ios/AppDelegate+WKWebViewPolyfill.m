@@ -147,7 +147,7 @@ NSString* appDataFolder;
 
                                           id value = [headers objectForKey:key];
 
-                                           if ([k isEqualToString:@"set-cookie"]) {
+                                        if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
                                              k = @"x-set-cookie";
                                            }
 
@@ -224,7 +224,7 @@ NSString* appDataFolder;
                                            }
                                            id value = [headers objectForKey:key];
 
-                                           if ([k isEqualToString:@"set-cookie"]) {
+                                           if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
                                                k = @"x-set-cookie";
                                            }
 
@@ -276,6 +276,20 @@ NSString* appDataFolder;
         [GCDWebServer setLogLevel:kGCDWebServerLoggingLevel_Warning];
         NSLog(@"Started http daemon: %@ ", _webServer.serverURL);
     }
+}
+
+- (void)URLSession:(NSURLSession *)session
+              task:(NSURLSessionTask *)task
+willPerformHTTPRedirection:(NSHTTPURLResponse *)redirectResponse
+        newRequest:(NSURLRequest *)request
+ completionHandler:(void (^)(NSURLRequest *))completionHandler
+{
+    NSURLRequest *newRequest = request;
+    if (redirectResponse) {
+        newRequest = nil;
+    }
+
+    completionHandler(newRequest);
 }
 
 @end
