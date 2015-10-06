@@ -91,8 +91,9 @@ NSString* appDataFolder;
    [_webServer addHandlerForMethod:@"GET" path:@"/proxy" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
       NSString *str = [request.headers objectForKey:@"x-url"];
       if (!str) {
-         str = [request.query objectForKey:@"url"];
+         str = [request.query valueForKey:@"url"];
       }
+      str = [str stringByReplacingOccurrencesOfString:@"'" withString:@"%27"];
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
 
@@ -110,8 +111,13 @@ NSString* appDataFolder;
              [k isEqualToString: @"host"]) {
             continue;
          }
+
+          if ([k isEqualToString:@"x-cookie"]) {
+              k = @"cookie";
+          }
+
          id value = [request.headers objectForKey:key];
-         [req setValue:value forHTTPHeaderField:key];
+         [req setValue:value forHTTPHeaderField:k];
       }
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
@@ -138,8 +144,14 @@ NSString* appDataFolder;
                                               [k isEqualToString: @"host"]) {
                                              continue;
                                           }
+
                                           id value = [headers objectForKey:key];
-                                          [response setValue:value forAdditionalHeader:key];
+
+                                           if ([k isEqualToString:@"set-cookie"]) {
+                                             k = @"x-set-cookie";
+                                           }
+
+                                          [response setValue:value forAdditionalHeader:k];
                                        }
 
                                       if (headers[@"content-type"]) {
@@ -157,6 +169,7 @@ NSString* appDataFolder;
       if (!str) {
          str = [request.query objectForKey:@"url"];
       }
+      str = [str stringByReplacingOccurrencesOfString:@"'" withString:@"%27"];
       GCDWebServerDataRequest *mreq = (GCDWebServerDataRequest *) request;
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
@@ -176,8 +189,13 @@ NSString* appDataFolder;
              [k isEqualToString: @"host"]) {
             continue;
          }
+
+          if ([k isEqualToString:@"x-cookie"]) {
+              k = @"cookie";
+          }
+
          id value = [request.headers objectForKey:key];
-         [req setValue:value forHTTPHeaderField:key];
+         [req setValue:value forHTTPHeaderField:k];
       }
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
@@ -204,8 +222,13 @@ NSString* appDataFolder;
                                                [k isEqualToString: @"host"]) {
                                                continue;
                                            }
-                                          id value = [headers objectForKey:key];
-                                          [response setValue:value forAdditionalHeader:key];
+                                           id value = [headers objectForKey:key];
+
+                                           if ([k isEqualToString:@"set-cookie"]) {
+                                               k = @"x-set-cookie";
+                                           }
+
+                                           [response setValue:value forAdditionalHeader:k];
                                        }
 
                                        if (headers[@"content-type"]) {
