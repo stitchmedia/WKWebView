@@ -119,9 +119,10 @@ NSString* appDataFolder;
          id value = [request.headers objectForKey:key];
          [req setValue:value forHTTPHeaderField:k];
       }
-      NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
+      NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
-      NSURLSessionDataTask *task = [session dataTaskWithRequest:req
+       NSURLSessionDataTask *task;
+       task = [session dataTaskWithRequest:req
                                               completionHandler:
                                     ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
                                        NSData *resp = respz;
@@ -145,10 +146,18 @@ NSString* appDataFolder;
                                              continue;
                                           }
 
-                                          id value = [headers objectForKey:key];
+                                        id value = [headers objectForKey:key];
 
                                         if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
                                              k = @"x-set-cookie";
+                                           }
+
+                                           if ([k isEqualToString:@"location"]) {
+                                               if (request.headers[@"x-internal"]) {
+                                                   k = @"x-location";
+                                               } else {
+                                                   value = [value stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet alphanumericCharacterSet]];
+                                               }
                                            }
 
                                           [response setValue:value forAdditionalHeader:k];
@@ -198,8 +207,9 @@ NSString* appDataFolder;
          [req setValue:value forHTTPHeaderField:k];
       }
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
-      NSURLSession *session = [NSURLSession sessionWithConfiguration:config];
-      NSURLSessionDataTask *task = [session dataTaskWithRequest:req
+      NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+       NSURLSessionDataTask *task;
+       task = [session dataTaskWithRequest:req
                                               completionHandler:
                                     ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
                                        NSData *resp = respz;
@@ -226,6 +236,14 @@ NSString* appDataFolder;
 
                                            if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
                                                k = @"x-set-cookie";
+                                           }
+
+                                           if ([k isEqualToString:@"location"]) {
+                                               if (request.headers[@"x-internal"]) {
+                                                   k = @"x-location";
+                                               } else {
+                                                   value = [value stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet alphanumericCharacterSet]];
+                                               }
                                            }
 
                                            [response setValue:value forAdditionalHeader:k];
@@ -284,12 +302,7 @@ willPerformHTTPRedirection:(NSHTTPURLResponse *)redirectResponse
         newRequest:(NSURLRequest *)request
  completionHandler:(void (^)(NSURLRequest *))completionHandler
 {
-    NSURLRequest *newRequest = request;
-    if (redirectResponse) {
-        newRequest = nil;
-    }
-
-    completionHandler(newRequest);
+    completionHandler(nil);
 }
 
 @end
@@ -308,3 +321,26 @@ static void swizzleMethod(Class class, SEL destinationSelector, SEL sourceSelect
         method_exchangeImplementations(destinationMethod, sourceMethod);
     }
 }
+
+@implementation NSString (NSString_Extended)
+
+- (NSString *)urlencode {
+    NSMutableString *output = [NSMutableString string];
+    const unsigned char *source = (const unsigned char *)[self UTF8String];
+    int sourceLen = strlen((const char *)source);
+    for (int i = 0; i < sourceLen; ++i) {
+        const unsigned char thisChar = source[i];
+        if (thisChar == ' '){
+            [output appendString:@"+"];
+        } else if (thisChar == '.' || thisChar == '-' || thisChar == '_' || thisChar == '~' ||
+                   (thisChar >= 'a' && thisChar <= 'z') ||
+                   (thisChar >= 'A' && thisChar <= 'Z') ||
+                   (thisChar >= '0' && thisChar <= '9')) {
+            [output appendFormat:@"%c", thisChar];
+        } else {
+            [output appendFormat:@"%%%02X", thisChar];
+        }
+    }
+    return output;
+}
+@end
