@@ -97,7 +97,7 @@ NSString* appDataFolder;
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
 
-      [req setHTTPShouldHandleCookies:true];
+      [req setHTTPShouldHandleCookies:false];
       [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
       [req setURL:url];
       [req setHTTPMethod:@"GET"];
@@ -119,6 +119,11 @@ NSString* appDataFolder;
          id value = [request.headers objectForKey:key];
          [req setValue:value forHTTPHeaderField:k];
       }
+
+       if (request.query[@"cookie"]) {
+           [req setValue:request.query[@"cookie"] forHTTPHeaderField:@"cookie"];
+       }
+
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
        NSURLSessionDataTask *task;
@@ -183,7 +188,7 @@ NSString* appDataFolder;
       NSURL *url = [NSURL URLWithString:str];
       NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
 
-      [req setHTTPShouldHandleCookies:true];
+      [req setHTTPShouldHandleCookies:false];
       [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
       [req setURL:url];
       [req setHTTPMethod:@"POST"];
@@ -206,6 +211,11 @@ NSString* appDataFolder;
          id value = [request.headers objectForKey:key];
          [req setValue:value forHTTPHeaderField:k];
       }
+
+       if (request.query[@"cookie"]) {
+           [req setValue:request.query[@"cookie"] forHTTPHeaderField:@"cookie"];
+       }
+
       config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
       NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
        NSURLSessionDataTask *task;
