@@ -66,7 +66,7 @@
     <header-file src="src/ios/CDVWebViewUIDelegate.h"/>
     <source-file src="src/ios/CDVWebViewUIDelegate.m"/>
     
-    <dependency id="cordova-plugin-webserver" />
+    <dependency id="cordova-plugin-webserver" url="https://github.com/kaendfinger/cordova-plugin-webserver.git" />
 
   </platform>
 
