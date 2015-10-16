@@ -1,9 +1,8 @@
 #import <objc/runtime.h>
 #import "AppDelegate.h"
 #import "MyMainViewController.h"
-#import <GCDWebServer/GCDWebServer.h>
-#import <GCDWebServer/GCDWebServerPrivate.h>
-#import <GCDWebServer/GCDWebServerDataResponse.h>
+#import <GCDWebServers/GCDWebServers.h>
+#import <GCDWebServers/GCDWebServerDataResponse.h>
 
 // need to swap out a method, so swizzling it here
 static void swizzleMethod(Class class, SEL destinationSelector, SEL sourceSelector);
