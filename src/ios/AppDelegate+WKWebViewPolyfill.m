@@ -181,6 +181,96 @@ NSString* appDataFolder;
       }
    ];
 
+    [_webServer addHandlerForMethod:@"GET" pathRegex:@"/proxy/.+" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+        NSString *str = [request.URL.path substringFromIndex:7];
+        if (![str hasPrefix:@"http://"] && ![str hasPrefix:@"https://"]) {
+            str = [@"http://" stringByAppendingString:str];
+        }
+        NSURL *url = [NSURL URLWithString:str];
+        NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
+
+        [req setHTTPShouldHandleCookies:false];
+        [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+        [req setURL:url];
+        [req setHTTPMethod:@"GET"];
+
+        NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+        for (NSString* key in request.headers) {
+            id k = [key lowercaseString];
+            if ([k isEqualToString: @"connection"] ||
+                [k isEqualToString: @"content-length"] ||
+                [k isEqualToString: @"content-encoding"] ||
+                [k isEqualToString: @"host"]) {
+                continue;
+            }
+
+            if ([k isEqualToString:@"x-cookie"]) {
+                k = @"cookie";
+            }
+
+            id value = [request.headers objectForKey:key];
+            [req setValue:value forHTTPHeaderField:k];
+        }
+
+        if (request.query[@"cookie"]) {
+            [req setValue:request.query[@"cookie"] forHTTPHeaderField:@"cookie"];
+        }
+
+        NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+        config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
+        NSURLSessionDataTask *task;
+        task = [session dataTaskWithRequest:req
+                          completionHandler:
+                ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
+                    NSData *resp = respz;
+                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) urlResponse;
+                    NSDictionary *headers = [httpResponse allHeaderFields];
+
+                    if (requestError != nil) {
+                        resp = [[requestError localizedDescription] dataUsingEncoding:NSUnicodeStringEncoding];
+                    }
+
+                    GCDWebServerDataResponse *response = [[GCDWebServerDataResponse alloc] initWithData:resp contentType:@"text/plain"];
+
+                    response.statusCode = httpResponse.statusCode;
+
+                    for (NSString* key in headers) {
+                        id k = [key lowercaseString];
+                        if ([k isEqualToString: @"connection"] ||
+                            [k isEqualToString: @"content-length"] ||
+                            [k isEqualToString: @"content-encoding"] ||
+                            [k isEqualToString: @"host"]) {
+                            continue;
+                        }
+
+                        id value = [headers objectForKey:key];
+
+                        if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
+                            k = @"x-set-cookie";
+                        }
+
+                        if ([k isEqualToString:@"location"]) {
+                            if (request.headers[@"x-internal"]) {
+                                k = @"x-location";
+                            } else {
+                                value = [value stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet alphanumericCharacterSet]];
+                            }
+                        }
+
+                        [response setValue:value forAdditionalHeader:k];
+                    }
+
+                    if (headers[@"content-type"]) {
+                        response.contentType = headers[@"content-type"];
+                    }
+
+                    completionBlock(response);
+                }];
+        [task resume];
+    }
+     ];
+
+
    [_webServer addHandlerForMethod:@"POST" path:@"/proxy" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
       NSString *str = [request.headers objectForKey:@"x-url"];
       if (!str) {
@@ -271,6 +361,98 @@ NSString* appDataFolder;
       [task resume];
    }
     ];
+
+    [_webServer addHandlerForMethod:@"POST" pathRegex:@"/proxy/.+" requestClass:GCDWebServerDataRequest.self asyncProcessBlock:^(GCDWebServerRequest *request, GCDWebServerCompletionBlock completionBlock) {
+        NSString *str = [request.URL.path substringFromIndex:7];
+        if (![str hasPrefix:@"http://"] && ![str hasPrefix:@"https://"]) {
+            str = [@"http://" stringByAppendingString:str];
+        }
+        str = [str stringByReplacingOccurrencesOfString:@"'" withString:@"%27"];
+        GCDWebServerDataRequest *mreq = (GCDWebServerDataRequest *) request;
+        NSURL *url = [NSURL URLWithString:str];
+        NSMutableURLRequest *req = [[NSMutableURLRequest alloc] init];
+
+        [req setHTTPShouldHandleCookies:false];
+        [req setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+        [req setURL:url];
+        [req setHTTPMethod:@"POST"];
+        [req setHTTPBody:mreq.data];
+
+        NSURLSessionConfiguration *config = [NSURLSessionConfiguration ephemeralSessionConfiguration];
+        for (NSString* key in request.headers) {
+            id k = [key lowercaseString];
+            if ([k isEqualToString: @"connection"] ||
+                [k isEqualToString: @"content-length"] ||
+                [k isEqualToString: @"content-encoding"] ||
+                [k isEqualToString: @"host"]) {
+                continue;
+            }
+
+            if ([k isEqualToString:@"x-cookie"]) {
+                k = @"cookie";
+            }
+
+            id value = [request.headers objectForKey:key];
+            [req setValue:value forHTTPHeaderField:k];
+        }
+
+        if (request.query[@"cookie"]) {
+            [req setValue:request.query[@"cookie"] forHTTPHeaderField:@"cookie"];
+        }
+
+        config.requestCachePolicy = NSURLRequestReloadIgnoringCacheData;
+        NSURLSession *session = [NSURLSession sessionWithConfiguration:config delegate:self delegateQueue:nil];
+        NSURLSessionDataTask *task;
+        task = [session dataTaskWithRequest:req
+                          completionHandler:
+                ^(NSData *respz, NSURLResponse *urlResponse, NSError *requestError) {
+                    NSData *resp = respz;
+                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) urlResponse;
+                    NSDictionary *headers = [httpResponse allHeaderFields];
+
+                    if (requestError != nil) {
+                        resp = [[requestError localizedDescription] dataUsingEncoding:NSUnicodeStringEncoding];
+                    }
+
+                    GCDWebServerDataResponse *response = [[GCDWebServerDataResponse alloc] initWithData:resp contentType:@"text/plain"];
+
+                    response.statusCode = httpResponse.statusCode;
+
+                    for (NSString* key in headers) {
+                        id k = [key lowercaseString];
+                        if ([k isEqualToString: @"connection"] ||
+                            [k isEqualToString: @"content-length"] ||
+                            [k isEqualToString: @"content-encoding"] ||
+                            [k isEqualToString: @"host"]) {
+                            continue;
+                        }
+                        id value = [headers objectForKey:key];
+
+                        if (request.headers[@"x-internal"] && [k isEqualToString:@"set-cookie"]) {
+                            k = @"x-set-cookie";
+                        }
+
+                        if ([k isEqualToString:@"location"]) {
+                            if (request.headers[@"x-internal"]) {
+                                k = @"x-location";
+                            } else {
+                                value = [value stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet alphanumericCharacterSet]];
+                            }
+                        }
+
+                        [response setValue:value forAdditionalHeader:k];
+                    }
+
+                    if (headers[@"content-type"]) {
+                        response.contentType = headers[@"content-type"];
+                    }
+
+                    completionBlock(response);
+                }];
+        [task resume];
+    }
+     ];
+
 }
 
 - (BOOL)identity_application: (UIApplication *)application
